@@ -1,0 +1,4 @@
+# Install the project dependencies first, then add RAPIDS cuML from NVIDIA's index.
+-r requirements.txt
+--extra-index-url https://pypi.nvidia.com
+cuml-cu12

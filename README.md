@@ -141,6 +141,44 @@ Kiểm tra tính toàn vẹn dữ liệu và đảm bảo không có rò rỉ d�
 pytest -v
 ```
 
+### 4.4. Chạy trên Kaggle với GPU
+
+VS Code chỉ dùng để sửa code; notebook Kaggle mới là nơi chạy trên máy chủ GPU.
+
+1. Đẩy repository lên GitHub hoặc tạo một Kaggle Dataset từ thư mục project.
+2. Tạo `Kaggle > Code > New Notebook`, chọn `Settings > Accelerator > GPU T4`.
+3. Nếu clone từ GitHub, chạy các cell sau:
+
+```python
+!git clone https://github.com/vungocthien843-cyber/icta_vnthien.git /kaggle/working/Restruct_code_ICTA
+%cd /kaggle/working/Restruct_code_ICTA
+!pip install -q -r requirements-kaggle.txt
+```
+
+Nếu dùng Kaggle Dataset, thay phần clone bằng đường dẫn dataset tương ứng và chép project vào `/kaggle/working`.
+
+Kiểm tra GPU và cuML trước khi chạy:
+
+```python
+!nvidia-smi
+import cuml
+from src.models.baselines import check_gpu_support
+print("cuML version:", cuml.__version__)
+print("GPU models enabled:", check_gpu_support())
+```
+
+Kết quả phải in `GPU models enabled: True`. Nếu in `False`, notebook đang fallback về scikit-learn CPU.
+
+Vì repository đã có dữ liệu trong `data/processed/`, chạy các bước đánh giá:
+
+```python
+!python main.py --stage benchmark
+!python main.py --stage ablation
+!python main.py --stage ensemble
+```
+
+Kết quả được ghi vào `results/latest/tables/`. Không chạy `preprocess` nếu chưa đưa `full database.xml` và `meddra_all_se.tsv` vào Kaggle Dataset.
+
 ---
 
 ## 5. Quản lý Kết quả
