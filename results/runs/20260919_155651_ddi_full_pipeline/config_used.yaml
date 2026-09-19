@@ -1,0 +1,60 @@
+# Cấu hình thực nghiệm mặc định cho toàn bộ dữ liệu DrugBank 5.0
+experiment:
+  name: "ddi_full_pipeline"
+  seed: 42
+  use_gpu: true
+
+data:
+  raw_xml: "data/raw/full database.xml"
+  sider_tsv: "data/raw/meddra_all_se.tsv"
+  processed_dir: "data/processed"
+  nodes_step1: "data/processed/drug_nodes.csv"
+  edges_step1: "data/processed/drug_edges.csv"
+  nodes_clean: "data/processed/drug_node_ver2.csv"
+  edges_clean: "data/processed/drug_edge_final.csv"
+  nodes_sider: "data/processed/drug_nodes_with_side_effects.csv"
+  nodes_final: "data/processed/drug_node_final.csv"
+  atc_csv: "data/processed/feature_ATC.csv"
+  mesh_csv: "data/processed/feature_MESH.csv"
+  ade_csv: "data/processed/feature_ADE.csv"
+  chemical_csv: "data/processed/feature_SMILES.csv"
+  graph_full_pkl: "data/processed/ddi_graph_final.pkl"
+  graph_train_pkl: "data/processed/ddi_graph_train_with_comm.pkl"
+  communities_csv: "data/processed/drug_communities.csv"
+  split_pkl: "data/processed/pos_edge_split.pkl"
+  topo_csv: "data/processed/8ft_topology.csv"
+  final_dataset_csv: "data/processed/Final_Dataset_DDI.csv"
+  train_csv: "data/processed/train_data.csv"
+  test_csv: "data/processed/test_data.csv"
+
+graph:
+  test_size: 0.34
+  random_state: 42
+
+features:
+  semantic:
+    - "sim_atc"
+    - "sim_mesh"
+    - "sim_ade"
+    - "sim_chemical"
+  topology:
+    - "cn"
+    - "jc"
+    - "aai"
+    - "rai"
+    - "pa"
+    - "ccn"
+    - "cra"
+    - "wic"
+
+evaluation:
+  cv_splits: 5
+  multi_run_seeds: [7, 99, 123, 999, 2024]
+  multi_run_mode: "bootstrap"
+  shap_sample_size: 2000
+  stacking_cv: 5
+  stacking_passthrough: true
+
+output:
+  results_dir: "results"
+  latex_style: "booktabs"

@@ -1,0 +1,23 @@
+name: ddi_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy>=1.24
+  - pandas>=2.0
+  - scipy>=1.10
+  - scikit-learn>=1.2
+  - networkx>=2.8
+  - pyyaml>=6.0
+  - requests>=2.28
+  - matplotlib>=3.7
+  - seaborn>=0.12
+  - pytest>=7.0
+  - pip:
+      - rdkit
+      - python-louvain
+      - xgboost
+      - lightgbm
+      - shap

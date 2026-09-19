@@ -1,124 +1,195 @@
-# Improving Drug–Drug Interaction Prediction
+# Improving Drug–Drug Interaction Prediction via SHAP-Based Feature Selection and Ensemble Learning
 
-Dự án dự đoán tương tác thuốc–thuốc (Drug–Drug Interaction, DDI) từ DrugBank 5.0. Notebook chính: [`processData_Drugbank5.0_Final_.ipynb`](processData_Drugbank5.0_Final_.ipynb).
+Dự án dự đoán tương tác thuốc–thuốc (Drug–Drug Interaction, DDI) từ cơ sở dữ liệu DrugBank 5.0 và SIDER.
 
-Pipeline kết hợp đặc trưng cấu trúc hóa học, ngữ nghĩa y sinh và cấu trúc mạng tương tác thuốc; sau đó đánh giá bằng nhiều mô hình ML, SHAP/ablation và ensemble.
+Pipeline kết hợp 4 đặc trưng tương đồng y sinh / cấu trúc hóa học (ATC, MeSH, ADE, SMILES) và 8 đặc trưng cấu trúc mạng đồ thị (Louvain community và neighborhood). Hệ thống đánh giá qua 8 mô hình ML baseline, phân tích độ quan trọng đặc trưng (Leave-One-Out, SHAP) và mô hình kết hợp Ensemble (Voting, Stacking).
+
+---
 
 ## 1. Luồng xử lý
 
-
-
 ```text
-DrugBank XML → làm sạch nodes/edges → ghép SIDER
-→ similarity ATC/MeSH/ADE/SMILES → đồ thị DDI + Louvain
-→ 8 topology features → ghép thành 12 features
-→ train/test chống leakage → benchmark, SHAP/ablation, ensemble
+DrugBank XML ──► Làm sạch nodes & edges ──► Ghép SIDER (ADE)
+  │
+  ├──► 4 Đặc trưng Ngữ nghĩa & Hóa học (ATC, MeSH, ADE, SMILES)
+  │
+  └──► Đồ thị DDI ──► Tách cạnh dương (Train/Test) ──► Louvain trên G_train
+                         │
+                         └──► 8 Đặc trưng Cấu trúc (Neighborhood + Community)
+                                │
+                                └──► Ghép 12 đặc trưng (Final_Dataset_DDI.csv)
+                                       │
+                                       ├──► 5-Fold Cross Validation & Statistical Tests
+                                       ├──► Leave-One-Out & SHAP Feature Ablation
+                                       └──► Ensemble Learning (Voting, Stacking)
+                                              │
+                                              └──► Xuất Bảng LaTeX (.tex) và CSV
 ```
 
-## 2. Các bước chính
+---
 
-### 2.1. Trích xuất và làm sạch DrugBank
-
-`DrugBankParser` đọc XML và tạo `drug_nodes.csv`, `drug_edges.csv`. Một thuốc chỉ được giữ khi có SMILES, InChIKey, ATC và MeSH; cạnh trỏ tới thuốc không hợp lệ bị loại.
-
-`DDI_NetworkFilter` lọc cạnh theo node hợp lệ, chuẩn hóa cạnh vô hướng (`source < target`), loại cạnh trùng/self-loop và thuốc cô lập. Đầu ra: `drug_node_ver2.csv`, `drug_edge_final.csv`.
-
-### 2.2. Ghép tác dụng phụ từ SIDER
-
-`SIDER_DrugMapper` ánh xạ DrugBank → PubChem CID, ưu tiên InChIKey và dự phòng DrugBank ID qua PubChem PUG REST API. Các mã UMLS/MedDRA được gom vào `side_effect_codes`.
-
-Đầu ra: `drug_nodes_with_side_effects.csv` và `drug_node_final.csv` (bỏ `inchikey`, `pubchem_cid`).
-
-### 2.3. Tạo đặc trưng semantic
-
-ATC, MeSH và ADE được chuyển thành vector nhị phân, TF-IDF, chuẩn hóa L2 rồi tính cosine similarity. SMILES được chuyển thành Morgan fingerprint (radius 2, 1024 bit) và tính Tanimoto similarity.
-
-Đầu ra:
+## 2. Cấu trúc Thư mục
 
 ```text
-feature_ATC.csv, feature_MESH.csv, feature_ADE.csv, feature_SMILES.csv
+Restruct_code_ICTA/
+├── configs/                          # File cấu hình tham số thực nghiệm (YAML)
+│   └── default.yaml                  # Cấu hình mặc định
+│
+├── data/                             # Thư mục dữ liệu
+│   ├── raw/                          # Dữ liệu gốc (full database.xml, meddra_all_se.tsv)
+│   └── processed/                    # Dữ liệu trung gian và ma trận đặc trưng
+│
+├── src/                              # Mã nguồn chính
+│   ├── data/                         # Parser XML, bộ lọc mạng DDI, mapper SIDER, chia train/test
+│   ├── features/                     # Sinh 4 semantic + 8 topology features
+│   ├── models/                       # 8 ML baselines và Ensemble (hỗ trợ GPU cuML và CPU)
+│   ├── evaluation/                   # Độ đo đánh giá, Paired t-test, Wilcoxon, SHAP, xuất LaTeX
+│   └── utils/                        # Đọc config, random seed, logger
+│
+├── scripts/                          # Script chạy từng bước độc lập
+│   ├── 01_prepare_data.py            # Bước 1: Parse XML và ghép SIDER
+│   ├── 02_build_features.py          # Bước 2: Sinh đặc trưng và dựng đồ thị G_train
+│   ├── 03_run_benchmark.py           # Bước 3: Benchmark 5-Fold CV và kiểm định thống kê
+│   ├── 04_run_ablation.py            # Bước 4: Ablation study và SHAP
+│   └── 05_run_ensemble.py            # Bước 5: Voting và Stacking
+│
+├── results/                          # Kết quả đầu ra
+│   ├── latest/tables/                # Bảng mới nhất (CSV và LaTeX .tex)
+│   ├── runs/                         # Lịch sử các lần chạy
+│   └── logs/                         # File log
+│
+├── tests/                            # Unit tests
+│   ├── test_leakage.py               # Kiểm tra G_train không chứa cạnh test
+│   └── test_pipeline.py              # Kiểm tra tính toàn vẹn 12 đặc trưng và nhãn
+│
+├── main.py                           # CLI điều phối toàn bộ pipeline
+├── pytest.ini                        # Cấu hình pytest
+├── requirements.txt                  # Thư viện phụ thuộc pip
+└── environment.yml                   # Cấu hình môi trường conda
 ```
 
-Bốn giá trị được ghép theo cặp thuốc thành `sim_atc`, `sim_mesh`, `sim_ade`, `sim_chemical`.
+---
 
-### 2.4. Xây dựng đồ thị và Louvain
+## 3. Cài đặt Môi trường
 
-`DDIGraphBuilder` tạo đồ thị vô hướng NetworkX từ `drug_edge_final.csv`, gắn thuộc tính node và lưu `ddi_graph_final.pkl`.
-
-`SimpleLouvainPipeline` chia cạnh dương thành train/test với `test_size=0.34`. `G_train` chứa toàn bộ node nhưng chỉ chứa cạnh dương train; Louvain được chạy trên `G_train` để không dùng cạnh test. Kết quả: `drug_communities.csv`, `ddi_graph_train_with_comm.pkl`, `pos_edge_split.pkl`.
-
-### 2.5. Tạo 8 đặc trưng topology
-
-Tất cả cặp thuốc được tính trên `G_train`:
-
-| Nhóm           | Đặc trưng                             |
-| --------------- | ---------------------------------------- |
-| Neighborhood    | `cn`, `jc`, `aai`, `rai`, `pa` |
-| Community-aware | `ccn`, `cra`, `wic`                |
-
-`label=1` nếu cặp là cạnh DrugBank, `label=0` nếu không có cạnh. `pos_split` ghi cạnh dương thuộc train/test. Đầu ra: `8ft_topology.csv`.
-
-### 2.6. Ghép dataset và chia train/test
-
-`DataIntegrationPipeline` ghép 8 topology + 4 semantic thành `Final_Dataset_DDI.csv`.
-
-`build_final_train_test` giữ nguyên `pos_split` của cạnh dương, chỉ chia mẫu âm ngẫu nhiên theo tỷ lệ test 34%, với `random_state=42`. Sau đó bỏ các cột hỗ trợ `u`, `v`, `pos_split` và lưu:
-
-```text
-train_data.csv
-test_data.csv
-```
-
-## 3. Đánh giá mô hình
-
-Benchmark gồm Decision Tree, Logistic Regression, Gaussian Naive Bayes, kNN, SVM, Random Forest, XGBoost và LightGBM. Các chỉ số gồm F1, AUPR, Precision, Recall, Accuracy, Specificity, Log loss và thời gian chạy. Do dữ liệu mất cân bằng, cần ưu tiên F1/AUPR thay vì chỉ Accuracy.
-
-Phần phân tích đặc trưng gồm:
-
-1. Leave-one-out: bỏ từng feature và đo thay đổi F1/AUPR.
-2. SHAP cumulative: xếp hạng theo `|SHAP|` trên train rồi thêm dần feature.
-3. Group ablation: so sánh toàn bộ, chỉ topology, chỉ semantic, bỏ ADE/ATC.
-
-Ensemble so sánh RF, SVM, GaussianNB, Logistic Regression với Hard Voting, Soft Voting và Stacking (`cv=5`, `passthrough=True`). cuML được dùng khi có GPU; nếu không sẽ fallback sang scikit-learn CPU.
-
-## 4. Cách chạy
-
-Notebook hiện dành cho Kaggle, sử dụng `/kaggle/input` và `/kaggle/working`. Cần cung cấp:
-
-- DrugBank XML, hiện dùng tên `full database.xml`;
-- SIDER `meddra_all_se.tsv`;
-- `train_data.csv` và `test_data.csv` nếu chạy trực tiếp phần đánh giá.
-
-Chạy các cell theo đúng thứ tự vì mỗi bước dùng file sinh ra từ bước trước. Có thể cần:
+Khuyến nghị sử dụng Python 3.10 hoặc 3.12:
 
 ```bash
-pip install rdkit python-louvain shap xgboost lightgbm
+# Cài đặt qua pip
+pip install -r requirements.txt
+
+# Hoặc cài đặt qua Conda
+conda env create -f environment.yml
+conda activate ddi_env
 ```
 
-Khi chạy local, phải thay các đường dẫn Kaggle. GPU/cuML là tùy chọn; CPU vẫn chạy được nhưng có thể rất chậm.
+Lưu ý về phần cứng:
+- Nếu môi trường có GPU NVIDIA và cài RAPIDS `cuml`, các mô hình RF, SVM, kNN, LR sẽ tự động chạy trên GPU.
+- Trên môi trường CPU thông thường, hệ thống tự động sử dụng Scikit-learn.
 
-## 5. Điều cần chú ý
+---
 
-1. **Không commit DrugBank XML.** Dữ liệu DrugBank có bản quyền/hạn chế sử dụng; file lớn đã được khai báo trong `.gitignore`.
-2. **Chống leakage:** community và topology phải học từ `G_train`, không dùng cạnh test.
-3. **Không chia lại cạnh dương:** luôn dùng `pos_edge_split.pkl` và `pos_split` ở bước cuối.
-4. **Không chọn feature/model bằng test nhiều lần:** chọn bằng CV trên train; test chỉ xác nhận cuối.
-5. **Tốn bộ nhớ:** notebook tạo ma trận similarity `N×N` và mọi cặp thuốc, nên có thể cần giảm dữ liệu, dùng sparse/batch hoặc máy nhiều RAM.
-6. **PubChem cần Internet:** API có thể rate-limit hoặc không tìm thấy CID. Nên lưu CSV trung gian để tránh gọi lại.
-7. **Giữ thứ tự `drugbank_id`:** thứ tự hàng/cột của bốn ma trận similarity phải nhất quán khi lookup.
-8. **Tái lập kết quả:** giữ `random_state=42`, ghi lại seed, phiên bản thư viện và chế độ GPU/CPU.
+## 4. Hướng dẫn Chạy
 
-## 6. File trung gian
+### 4.1. Chạy toàn bộ Pipeline
 
-| File                                                                                   | Vai trò                             |
-| -------------------------------------------------------------------------------------- | ------------------------------------ |
-| `drug_nodes.csv`, `drug_edges.csv`                                                 | Node/cạnh trích xuất từ DrugBank |
-| `drug_node_ver2.csv`, `drug_edge_final.csv`                                        | Mạng sau làm sạch                 |
-| `drug_nodes_with_side_effects.csv`, `drug_node_final.csv`                          | Node đã ghép SIDER                |
-| `feature_ATC.csv`, `feature_MESH.csv`, `feature_ADE.csv`, `feature_SMILES.csv` | Ma trận tương đồng              |
-| `ddi_graph_final.pkl`                                                                | Đồ thị DDI đầy đủ             |
-| `ddi_graph_train_with_comm.pkl`                                                      | Đồ thị train có community        |
-| `pos_edge_split.pkl`                                                                 | Cạnh dương train/test             |
-| `8ft_topology.csv`                                                                   | 8 topology features và nhãn        |
-| `Final_Dataset_DDI.csv`                                                              | Dataset đủ 12 features             |
-| `train_data.csv`, `test_data.csv`                                                  | Dữ liệu đầu vào mô hình       |
+Chạy toàn bộ quy trình:
+
+```bash
+python main.py
+```
+
+Quy trình thực hiện:
+1. Đọc dữ liệu đặc trưng tại `data/processed/`.
+2. Đánh giá 5-Fold Cross Validation trên 8 mô hình ML baseline (báo cáo Mean $\pm$ Std).
+3. Kiểm định thống kê Paired t-test và Wilcoxon signed-rank test.
+4. Chạy Leave-One-Out, Group Feature Ablation và SHAP Cumulative Feature Addition.
+5. Đánh giá mô hình kết hợp Ensemble (Hard Voting, Soft Voting, Stacking).
+6. Xuất các bảng kết quả dạng `.csv` và `.tex` vào thư mục `results/latest/tables/`.
+
+### 4.2. Chạy từng bước độc lập
+
+Sử dụng tham số `--stage` của `main.py` hoặc gọi trực tiếp file trong `scripts/`:
+
+```bash
+# Bước 1: Tiền xử lý dữ liệu thô (cần full database.xml và meddra_all_se.tsv trong data/raw/)
+python main.py --stage preprocess
+# hoặc: python scripts/01_prepare_data.py
+
+# Bước 2: Tính đặc trưng và phân chia Train/Test
+python main.py --stage features
+# hoặc: python scripts/02_build_features.py
+
+# Bước 3: Benchmark 8 mô hình (5-Fold CV)
+python main.py --stage benchmark
+# hoặc: python scripts/03_run_benchmark.py
+
+# Bước 4: Ablation study và SHAP
+python main.py --stage ablation
+# hoặc: python scripts/04_run_ablation.py
+
+# Bước 5: Huấn luyện Ensemble
+python main.py --stage ensemble
+# hoặc: python scripts/05_run_ensemble.py
+```
+
+### 4.3. Chạy Unit Tests
+
+Kiểm tra tính toàn vẹn dữ liệu và đảm bảo không có rò rỉ dữ liệu giữa tập train và test:
+
+```bash
+pytest -v
+```
+
+---
+
+## 5. Quản lý Kết quả
+
+1. **Dữ liệu trung gian (`data/processed/`)**:
+   - Các ma trận đặc trưng và phân cụm Louvain được lưu lại sau khi tính. Nếu muốn tính lại từ đầu, thêm cờ `--force`.
+
+2. **Lưu trữ kết quả (`results/`)**:
+   - Mỗi lần chạy được lưu vào thư mục riêng gắn timestamp tại `results/runs/<timestamp>_<name>/`.
+   - Kết quả mới nhất luôn được đồng bộ về `results/latest/tables/`:
+     ```text
+     results/latest/tables/
+     ├── benchmark_cv_results.tex
+     ├── stat_tests_f1.tex
+     ├── ablation_leave_one_out.tex
+     ├── ablation_groups.tex
+     ├── shap_cumulative.tex
+     └── ensemble_test_results.tex
+     ```
+
+Các file `.tex` được xuất theo định dạng `booktabs`, có thể chèn trực tiếp vào tài liệu LaTeX qua lệnh `\input{}`:
+
+```latex
+\usepackage{booktabs}
+
+\input{results/latest/tables/benchmark_cv_results.tex}
+\input{results/latest/tables/stat_tests_f1.tex}
+\input{results/latest/tables/ablation_groups.tex}
+\input{results/latest/tables/ensemble_test_results.tex}
+```
+
+---
+
+## 6. Lưu ý
+
+1. **Bảo vệ rò rỉ dữ liệu (Data Leakage)**: Thuật toán phân cụm Louvain và các đặc trưng đồ thị (topology) chỉ được tính trên $G_{train}$, không chứa cạnh test.
+2. **Cạnh dương**: Giữ cố định phân chia cạnh dương từ bước phân cụm sang tập train/test cuối cùng qua `pos_edge_split.pkl`.
+3. **Reproducibility**: Thiết lập seed cố định (`seed=42`) trong `configs/default.yaml` cho toàn bộ các bước ngẫu nhiên.
+4. **DrugBank XML**: File `full database.xml` có dung lượng lớn và bản quyền hạn chế nên không được commit lên git (đã được cấu hình trong `.gitignore`).
+
+---
+
+## 7. Trích dẫn
+
+```bibtex
+@article{ddi_shap_ensemble_2026,
+  title={Improving Drug--Drug Interaction Prediction via SHAP-Based Feature Selection and Ensemble Learning},
+  author={Vu Ngoc Thien and Collaborators},
+  journal={Conference / Journal Name},
+  year={2026}
+}
+```
