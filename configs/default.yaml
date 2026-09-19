@@ -57,4 +57,3 @@ evaluation:
 
 output:
   results_dir: "results"
-  latex_style: "booktabs"

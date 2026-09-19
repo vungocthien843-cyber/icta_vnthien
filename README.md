@@ -23,7 +23,7 @@ DrugBank XML ──► Làm sạch nodes & edges ──► Ghép SIDER (ADE)
                                        ├──► Leave-One-Out & SHAP Feature Ablation
                                        └──► Ensemble Learning (Voting, Stacking)
                                               │
-                                              └──► Xuất Bảng LaTeX (.tex) và CSV
+                                              └──► Xuất Bảng Kết Quả Định Dạng CSV
 ```
 
 ---
@@ -43,7 +43,7 @@ Restruct_code_ICTA/
 │   ├── data/                         # Parser XML, bộ lọc mạng DDI, mapper SIDER, chia train/test
 │   ├── features/                     # Sinh 4 semantic + 8 topology features
 │   ├── models/                       # 8 ML baselines và Ensemble (hỗ trợ GPU cuML và CPU)
-│   ├── evaluation/                   # Độ đo đánh giá, Paired t-test, Wilcoxon, SHAP, xuất LaTeX
+│   ├── evaluation/                   # Độ đo đánh giá, Paired t-test, Wilcoxon, SHAP
 │   └── utils/                        # Đọc config, random seed, logger
 │
 ├── scripts/                          # Script chạy từng bước độc lập
@@ -54,7 +54,7 @@ Restruct_code_ICTA/
 │   └── 05_run_ensemble.py            # Bước 5: Voting và Stacking
 │
 ├── results/                          # Kết quả đầu ra
-│   ├── latest/tables/                # Bảng mới nhất (CSV và LaTeX .tex)
+│   ├── latest/tables/                # Bảng kết quả mới nhất định dạng CSV
 │   ├── runs/                         # Lịch sử các lần chạy
 │   └── logs/                         # File log
 │
@@ -105,7 +105,7 @@ Quy trình thực hiện:
 3. Kiểm định thống kê Paired t-test và Wilcoxon signed-rank test.
 4. Chạy Leave-One-Out, Group Feature Ablation và SHAP Cumulative Feature Addition.
 5. Đánh giá mô hình kết hợp Ensemble (Hard Voting, Soft Voting, Stacking).
-6. Xuất các bảng kết quả dạng `.csv` và `.tex` vào thư mục `results/latest/tables/`.
+6. Xuất các bảng kết quả dạng `.csv` vào thư mục `results/latest/tables/`.
 
 ### 4.2. Chạy từng bước độc lập
 
@@ -153,24 +153,15 @@ pytest -v
    - Kết quả mới nhất luôn được đồng bộ về `results/latest/tables/`:
      ```text
      results/latest/tables/
-     ├── benchmark_cv_results.tex
-     ├── stat_tests_f1.tex
-     ├── ablation_leave_one_out.tex
-     ├── ablation_groups.tex
-     ├── shap_cumulative.tex
-     └── ensemble_test_results.tex
+     ├── benchmark_cv_results.csv
+     ├── stat_tests_f1.csv
+     ├── ablation_leave_one_out.csv
+     ├── ablation_groups.csv
+     ├── shap_cumulative.csv
+     └── ensemble_test_results.csv
      ```
 
-Các file `.tex` được xuất theo định dạng `booktabs`, có thể chèn trực tiếp vào tài liệu LaTeX qua lệnh `\input{}`:
-
-```latex
-\usepackage{booktabs}
-
-\input{results/latest/tables/benchmark_cv_results.tex}
-\input{results/latest/tables/stat_tests_f1.tex}
-\input{results/latest/tables/ablation_groups.tex}
-\input{results/latest/tables/ensemble_test_results.tex}
-```
+Các file `.csv` có thể mở trực tiếp bằng Microsoft Excel, Google Sheets, hoặc các phần mềm bảng tính và data science thông dụng.
 
 ---
 

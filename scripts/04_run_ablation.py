@@ -9,7 +9,6 @@ from src.utils.config import load_config
 from src.utils.logger import setup_logger
 from src.utils.seed import seed_everything
 from src.evaluation.explainability import AblationAndSHAP
-from src.evaluation.export import export_latex_table
 
 logger = setup_logger("Step04_AblationSHAP")
 
@@ -34,26 +33,16 @@ def run(config_path: str = "configs/default.yaml", output_dir: str = None):
     print("\n--- Kết quả Leave-One-Out ---")
     print(loo_df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
     loo_csv = os.path.join(out_dir, "ablation_leave_one_out.csv")
-    loo_tex = os.path.join(out_dir, "ablation_leave_one_out.tex")
     loo_df.to_csv(loo_csv, index=False, float_format="%.2f")
-    export_latex_table(
-        loo_df, loo_tex,
-        caption="Leave-One-Out feature importance on DDI holdout test set.",
-        label="tab:ablation_loo"
-    )
+    logger.info(f"Đã lưu kết quả Leave-One-Out tại: {loo_csv}")
 
     # 2. Group Ablation
     grp_df = ablation.group_ablation()
     print("\n--- Kết quả Group Ablation ---")
     print(grp_df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
     grp_csv = os.path.join(out_dir, "ablation_groups.csv")
-    grp_tex = os.path.join(out_dir, "ablation_groups.tex")
     grp_df.to_csv(grp_csv, index=False, float_format="%.2f")
-    export_latex_table(
-        grp_df, grp_tex,
-        caption="Feature group ablation comparing topology, semantic, and combined feature subsets.",
-        label="tab:ablation_groups"
-    )
+    logger.info(f"Đã lưu kết quả Group Ablation tại: {grp_csv}")
 
     # 3. SHAP Cumulative
     shap_df = ablation.shap_cumulative(sample_size=cfg.evaluation.shap_sample_size)
@@ -61,13 +50,8 @@ def run(config_path: str = "configs/default.yaml", output_dir: str = None):
         print("\n--- Kết quả SHAP Cumulative Addition ---")
         print(shap_df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
         shap_csv = os.path.join(out_dir, "shap_cumulative.csv")
-        shap_tex = os.path.join(out_dir, "shap_cumulative.tex")
         shap_df.to_csv(shap_csv, index=False, float_format="%.2f")
-        export_latex_table(
-            shap_df, shap_tex,
-            caption="Cumulative feature addition ranked by SHAP value on training set.",
-            label="tab:shap_cumulative"
-        )
+        logger.info(f"Đã lưu kết quả SHAP Cumulative tại: {shap_csv}")
 
 
 if __name__ == "__main__":

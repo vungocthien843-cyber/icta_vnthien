@@ -9,7 +9,6 @@ from src.utils.config import load_config
 from src.utils.logger import setup_logger
 from src.utils.seed import seed_everything
 from src.models.ensemble import DDIEnsembleTrainer
-from src.evaluation.export import export_latex_table
 
 logger = setup_logger("Step05_Ensemble")
 
@@ -38,13 +37,8 @@ def run(config_path: str = "configs/default.yaml", output_dir: str = None):
     print(ens_df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
 
     csv_path = os.path.join(out_dir, "ensemble_test_results.csv")
-    tex_path = os.path.join(out_dir, "ensemble_test_results.tex")
     ens_df.to_csv(csv_path, index=False, float_format="%.2f")
-    export_latex_table(
-        ens_df, tex_path,
-        caption="Comparison between individual base learners and ensemble strategies (Voting, Stacking) on DDI test holdout.",
-        label="tab:ensemble_results"
-    )
+    logger.info(f"Đã lưu kết quả Ensemble tại: {csv_path}")
 
 
 if __name__ == "__main__":

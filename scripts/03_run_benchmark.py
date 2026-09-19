@@ -10,7 +10,6 @@ from src.utils.logger import setup_logger
 from src.utils.seed import seed_everything
 from src.models.baselines import BenchmarkPipeline
 from src.evaluation.stat_tests import perform_statistical_tests
-from src.evaluation.export import export_latex_table
 
 logger = setup_logger("Step03_Benchmark")
 
@@ -44,27 +43,13 @@ def run(config_path: str = "configs/default.yaml", output_dir: str = None):
     results_df.to_csv(csv_path, index=False)
     logger.info(f"Đã lưu kết quả CSV tại: {csv_path}")
 
-    # Xuất LaTeX
-    tex_path = os.path.join(out_dir, "benchmark_cv_results.tex")
-    export_latex_table(
-        results_df,
-        tex_path,
-        caption=f"Performance comparison of 8 machine learning baselines on DDI prediction using {cfg.evaluation.cv_splits}-Fold Cross Validation (Mean $\\pm$ Std).",
-        label="tab:ddi_baselines_cv"
-    )
-
     # Kiểm định thống kê
     if bench.f1_per_fold:
         stat_f1 = perform_statistical_tests(bench.f1_per_fold, metric_name="F1")
         if not stat_f1.empty:
             stat_csv = os.path.join(out_dir, "stat_tests_f1.csv")
-            stat_tex = os.path.join(out_dir, "stat_tests_f1.tex")
             stat_f1.to_csv(stat_csv, index=False)
-            export_latex_table(
-                stat_f1, stat_tex,
-                caption="Paired t-test and Wilcoxon signed-rank test on F1-score across folds.",
-                label="tab:stat_tests_f1"
-            )
+            logger.info(f"Đã lưu kiểm định thống kê tại: {stat_csv}")
 
 
 if __name__ == "__main__":
