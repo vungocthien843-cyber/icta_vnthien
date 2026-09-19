@@ -102,8 +102,8 @@ class MeSHFeatureGenerator:
         self.drug_ids = self.df['drugbank_id'].tolist()
         self.N = len(self.drug_ids)
         
-        self.df[target_col] = self.df[target_col].apply(safe_parse_list)
-        self.target_col = target_col
+        self.target_col = 'mesh_terms'
+        self.df[self.target_col] = self.df[self.target_col].apply(safe_parse_list)
 
     def compute_mesh_similarity(self, output_path: Optional[str] = None) -> pd.DataFrame:
         logger.info(f"Bắt đầu tính toán tương đồng MeSH cho {self.N} loại thuốc...")
